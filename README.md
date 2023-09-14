@@ -12,3 +12,7 @@ The timetable is extracted from [@crux-bphc](https://github.com/crux-bphc)'s [Ch
 - Adds exam events and deletes classes during the exam weeks.
 
 - Can also delete multiple events at once, if required, with an option to exclude certain events.
+
+### Todo:
+- Add a json parser for customising event parameters like colors, titles, extra info in desc, etc.
+- Delete classes on holidays
