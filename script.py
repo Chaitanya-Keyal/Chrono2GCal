@@ -8,7 +8,6 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build as api_build
-from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
@@ -29,6 +28,88 @@ def auth():
         with open("token.json", "w") as token:
             token.write(creds.to_json())
     return creds
+
+
+def get_events(service, start_date, end_date):
+    events_result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=start_date + "T00:00:00+05:30",
+            timeMax=end_date + "T23:59:59+05:30",
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
+    return events_result.get("items", [])
+
+
+def del_events(
+    service,
+    start_date,
+    end_date,
+    excludeEvent=[],
+    excludeColorId=[],
+    onlyColorId=[],
+    force=False,
+):
+    # split date interval into months - [(start_date, end_date), ...)]
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
+    intervals = []
+    while start_date < end_date:
+        if start_date.month == end_date.month:
+            intervals.append(
+                (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+            )
+            break
+        intervals.append(
+            (
+                start_date.strftime("%Y-%m-%d"),
+                datetime.datetime.strptime(
+                    start_date.strftime("%Y-%m")
+                    + "-"
+                    + str(
+                        calendar.monthrange(start_date.year, start_date.month)[1]
+                    ).zfill(2)
+                    + "T"
+                    + "23:59:59",
+                    "%Y-%m-%dT%H:%M:%S",
+                ).strftime("%Y-%m-%d"),
+            )
+        )
+        start_date = datetime.datetime.strptime(
+            start_date.strftime("%Y-%m")
+            + "-"
+            + str(calendar.monthrange(start_date.year, start_date.month)[1]).zfill(2)
+            + "T"
+            + "23:59:59",
+            "%Y-%m-%dT%H:%M:%S",
+        )
+        start_date += datetime.timedelta(days=1)
+
+    # delete events in each interval
+    for start_date, end_date in intervals:
+        events = get_events(service, start_date, end_date)
+        if not force:
+            f = input(
+                f"Are you sure you want to delete all events in the range {start_date} to {end_date}? (y/n): "
+            )
+            if f.lower() != "y":
+                continue
+        for event in events:
+            try:
+                if event["colorId"] in excludeColorId:
+                    continue
+                if onlyColorId and event["colorId"] not in onlyColorId:
+                    continue
+            except KeyError:
+                continue
+            if event["summary"] in excludeEvent:
+                continue
+            service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+            print(f"Event deleted: {event['summary']}")
 
 
 def add_classes(service, classes, start_date, end_date):
@@ -112,14 +193,14 @@ def add_exams(service, exams, exams_start_end_dates: dict):
         print(f"{i.split('|')[1]} added: {i.split('|')[0]}")
 
     # Deleting Classes during Exams
-    del_events_in_range(
+    del_events(
         service,
         exams_start_end_dates["midsem_start_date"],
         exams_start_end_dates["midsem_end_date"],
         onlyColorId=["9", "10", "11"],
         force=True,
     )
-    del_events_in_range(
+    del_events(
         service,
         exams_start_end_dates["compre_start_date"],
         exams_start_end_dates["compre_end_date"],
@@ -128,7 +209,7 @@ def add_exams(service, exams, exams_start_end_dates: dict):
     )
 
 
-def add_classes_exams(service, timetable_ID, start_date, end_date):
+def init_classes_exams(service, timetable_ID, start_date, end_date):
     # Found Chrono API endpoints by inspecting network traffic
 
     timetable = json.loads(
@@ -244,119 +325,37 @@ def add_classes_exams(service, timetable_ID, start_date, end_date):
     add_exams(service, timetable["examTimes"], exams_start_end_dates)
 
 
-def del_events_in_range(
-    service,
-    start_date,
-    end_date,
-    excludeEvent=[],
-    excludeColorId=[],
-    onlyColorId=[],
-    force=False,
-):
-    # split date interval into months - [(start_date, end_date), ...)]
-    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
-    end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
-    intervals = []
-    while start_date < end_date:
-        if start_date.month == end_date.month:
-            intervals.append(
-                (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-            )
-            break
-        intervals.append(
-            (
-                start_date.strftime("%Y-%m-%d"),
-                datetime.datetime.strptime(
-                    start_date.strftime("%Y-%m")
-                    + "-"
-                    + str(
-                        calendar.monthrange(start_date.year, start_date.month)[1]
-                    ).zfill(2)
-                    + "T"
-                    + "23:59:59",
-                    "%Y-%m-%dT%H:%M:%S",
-                ).strftime("%Y-%m-%d"),
-            )
-        )
-        start_date = datetime.datetime.strptime(
-            start_date.strftime("%Y-%m")
-            + "-"
-            + str(calendar.monthrange(start_date.year, start_date.month)[1]).zfill(2)
-            + "T"
-            + "23:59:59",
-            "%Y-%m-%dT%H:%M:%S",
-        )
-        start_date += datetime.timedelta(days=1)
-
-    # delete events in each interval
-    for start_date, end_date in intervals:
-        events_result = (
-            service.events()
-            .list(
-                calendarId="primary",
-                timeMin=start_date + "T00:00:00+05:30",
-                timeMax=end_date + "T23:59:59+05:30",
-                singleEvents=True,
-                orderBy="startTime",
-            )
-            .execute()
-        )
-        events = events_result.get("items", [])
-        if not force:
-            f = input(
-                f"Are you sure you want to delete all events in the range {start_date} to {end_date}? (y/n): "
-            )
-            if f.lower() != "y":
-                continue
-        for event in events:
-            try:
-                if event["colorId"] in excludeColorId:
-                    continue
-                if onlyColorId and event["colorId"] not in onlyColorId:
-                    continue
-            except KeyError:
-                continue
-            if event["summary"] in excludeEvent:
-                continue
-            service.events().delete(calendarId="primary", eventId=event["id"]).execute()
-            print(f"Event deleted: {event['summary']}")
-
-
 def main(creds):
-    try:
-        service = api_build("calendar", "v3", credentials=creds)
+    service = api_build("calendar", "v3", credentials=creds)
 
-        timetable_ID = int(input("Enter timetable ID: "))
+    timetable_ID = int(input("Enter timetable ID: "))
 
-        start_date = None
-        while True:
-            start_date = input(
-                "Enter start date (YYYY-MM-DD) [Leave blank to start today]: "
-            )
-            if not start_date:
-                start_date = datetime.datetime.today().strftime("%Y-%m-%d")
-                break
-            try:
-                datetime.datetime.strptime(start_date, "%Y-%m-%d")
-                break
-            except ValueError:
-                print("\nIncorrect date format, should be YYYY-MM-DD")
-                continue
+    start_date = None
+    while True:
+        start_date = input(
+            "Enter start date (YYYY-MM-DD) [Leave blank to start today]: "
+        )
+        if not start_date:
+            start_date = datetime.datetime.today().strftime("%Y-%m-%d")
+            break
+        try:
+            datetime.datetime.strptime(start_date, "%Y-%m-%d")
+            break
+        except ValueError:
+            print("\nIncorrect date format, should be YYYY-MM-DD")
+            continue
 
-        end_date = None
-        while True:
-            end_date = input("Enter semester end date (Excluded) (YYYY-MM-DD): ")
-            try:
-                datetime.datetime.strptime(end_date, "%Y-%m-%d")
-                break
-            except ValueError:
-                print("\nIncorrect date format, should be YYYY-MM-DD")
-                continue
+    end_date = None
+    while True:
+        end_date = input("Enter semester end date (Excluded) (YYYY-MM-DD): ")
+        try:
+            datetime.datetime.strptime(end_date, "%Y-%m-%d")
+            break
+        except ValueError:
+            print("\nIncorrect date format, should be YYYY-MM-DD")
+            continue
 
-        add_classes_exams(service, timetable_ID, start_date, end_date)
-
-    except HttpError as error:
-        print(f"An error occurred: {error}")
+    init_classes_exams(service, timetable_ID, start_date, end_date)
 
 
 if __name__ == "__main__":
