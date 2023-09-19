@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 
+import pdfplumber
 import requests
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -28,6 +29,44 @@ def auth():
         with open("token.json", "w") as token:
             token.write(creds.to_json())
     return creds
+
+
+def get_holidays(filepath):
+    pdf = pdfplumber.open(filepath)
+    tables = []
+    for i in pdf.pages:
+        tables.extend(i.extract_tables())  # Extract all tables from the pdf
+    holidays = []
+    for i in tables:
+        for j in i:
+            if j[1] and j[1].endswith("(H)"):
+                holidays.append(
+                    datetime.datetime.strptime(j[0][: j[0].index("(")].strip(), "%B %d")
+                )  # Extracts the date from the table
+    for i in range(len(holidays)):
+        holidays[i] = (
+            holidays[i]
+            .replace(
+                year=datetime.datetime.today().year
+                + (not (datetime.datetime.today().month <= holidays[i].month))
+            )
+            .strftime("%Y-%m-%d")
+        )  # If the holiday is in the next year, add 1 to the year
+    return sorted(holidays)
+
+
+def delete_classes_on_holidays(service, holidays):
+    print("Deleting classes on holidays...")
+    for i in holidays:
+        events = get_events(service, i, i)
+        for event in events:
+            try:
+                if event["colorId"] not in ["9", "10", "11"]:
+                    continue
+            except KeyError:
+                continue
+            service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+            print(f"Event deleted: {event['summary']}")
 
 
 def get_events(service, start_date, end_date):
@@ -192,7 +231,7 @@ def add_exams(service, exams, exams_start_end_dates: dict):
         service.events().insert(calendarId="primary", body=exam).execute()
         print(f"{i.split('|')[1]} added: {i.split('|')[0]}")
 
-    # Deleting Classes during Exams
+    print("Deleting Classes during Exams...")
     del_events(
         service,
         exams_start_end_dates["midsem_start_date"],
@@ -294,32 +333,41 @@ def init_classes_exams(service, timetable_ID, start_date, end_date):
             convert_slots_to_days_hr(j.split(":")[2] + j.split(":")[3])
             for j in i["roomTime"]
         ]
-        days = [j[0] for j in timings]
+        class_times = []
+        for j in timings:
+            block_period = [k for k in timings if k[0] == j[0]]
+            if len(block_period) > 1 and block_period not in class_times:
+                class_times.append(block_period)
+            diff_hrs = [k for k in timings if k[1] == j[1]]
+            if diff_hrs not in class_times and len(block_period) == 1:
+                class_times.append(diff_hrs)
+        for k in class_times:
+            days = [x[0] for x in k]
+            classes.append(
+                {
+                    "title": i["roomTime"][0].split(":")[0],
+                    "location": i["roomTime"][0].split(":")[1],
+                    "days": list(set(days)),
+                    "start": k[0][1],
+                    "end": k[0][1][:2] + ":50:00"
+                    if days.count(days[0]) == 1
+                    else str(int(k[0][1][:2]) + days.count(days[0]) - 1) + ":50:00",
+                    "section": i["type"] + str(i["number"]),
+                    "instructors": i["instructors"],
+                    "type": types_dict[i["type"]],
+                    "name": courses_details[i["courseId"]]["name"].title(),
+                }
+            )
 
-        classes.append(
-            {
-                "title": i["roomTime"][0].split(":")[0],
-                "location": i["roomTime"][0].split(":")[1],
-                "days": list(set(days)),
-                "start": timings[0][1],
-                "end": timings[0][1][:2] + ":50:00"
-                if days.count(days[0]) == 1
-                else str(int(timings[0][1][:2]) + days.count(days[0]) - 1) + ":50:00",
-                "section": i["type"] + str(i["number"]),
-                "instructors": i["instructors"],
-                "type": types_dict[i["type"]],
-                "name": courses_details[i["courseId"]]["name"].title(),
-            }
-        )
-        for i in classes:
-            if i["location"] == "WS":  # QOL
-                i["location"] = "Workshop"
-            elif i["location"] == "A222":  # Error in Chrono's Data
-                i["type"] = "Practical"
-                i["section"] = "P" + i["section"][1:]
-            elif i["location"] == "B124":  # Error in Chrono's Data
-                i["type"] = "Practical"
-                i["section"] = "P" + i["section"][1:]
+    for i in classes:
+        if i["location"] == "WS":  # QOL
+            i["location"] = "Workshop"
+        elif i["location"] == "A222":  # Error in Chrono's Data
+            i["type"] = "Practical"
+            i["section"] = "P" + i["section"][1:]
+        elif i["location"] == "B124":  # Error in Chrono's Data
+            i["type"] = "Practical"
+            i["section"] = "P" + i["section"][1:]
 
     add_classes(service, classes, start_date, end_date)
     add_exams(service, timetable["examTimes"], exams_start_end_dates)
@@ -327,8 +375,6 @@ def init_classes_exams(service, timetable_ID, start_date, end_date):
 
 def main(creds):
     service = api_build("calendar", "v3", credentials=creds)
-
-    timetable_ID = int(input("Enter timetable ID: "))
 
     start_date = None
     while True:
@@ -355,7 +401,18 @@ def main(creds):
             print("\nIncorrect date format, should be YYYY-MM-DD")
             continue
 
+    timetable_ID = int(input("Enter timetable ID: "))
+
     init_classes_exams(service, timetable_ID, start_date, end_date)
+    delete_classes_on_holidays(service, get_holidays("BPHC_Calendar_23_24.pdf"))
+
+    # del_events(
+    #     service,
+    #     start_date,
+    #     end_date,
+    #     onlyColorId=["5", "6", "9", "10", "11"],
+    #     force=True,
+    # )
 
 
 if __name__ == "__main__":
