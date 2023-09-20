@@ -97,36 +97,21 @@ def del_events(
     start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
     end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d")
     intervals = []
-    while start_date < end_date:
+    while start_date <= end_date:
         if start_date.month == end_date.month:
             intervals.append(
                 (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
             )
             break
+        month_end = datetime.datetime(
+            start_date.year,
+            start_date.month,
+            calendar.monthrange(start_date.year, start_date.month)[1],
+        )
         intervals.append(
-            (
-                start_date.strftime("%Y-%m-%d"),
-                datetime.datetime.strptime(
-                    start_date.strftime("%Y-%m")
-                    + "-"
-                    + str(
-                        calendar.monthrange(start_date.year, start_date.month)[1]
-                    ).zfill(2)
-                    + "T"
-                    + "23:59:59",
-                    "%Y-%m-%dT%H:%M:%S",
-                ).strftime("%Y-%m-%d"),
-            )
+            (start_date.strftime("%Y-%m-%d"), month_end.strftime("%Y-%m-%d"))
         )
-        start_date = datetime.datetime.strptime(
-            start_date.strftime("%Y-%m")
-            + "-"
-            + str(calendar.monthrange(start_date.year, start_date.month)[1]).zfill(2)
-            + "T"
-            + "23:59:59",
-            "%Y-%m-%dT%H:%M:%S",
-        )
-        start_date += datetime.timedelta(days=1)
+        start_date = month_end + datetime.timedelta(days=1)
 
     # delete events in each interval
     for start_date, end_date in intervals:
