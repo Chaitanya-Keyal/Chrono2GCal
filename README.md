@@ -25,5 +25,5 @@
 
 ### Notes:
 
-- For exams seating arrangement, currently only the Midsems 2023-24 Semester 2 PDF is supported. If other PDFs follow the same format, that will also work. If not, I will be adding support for each new PDF as they are released by TTD.
+- For exams seating arrangement, the PDFs in `pdfs/` are supported. If other PDFs follow the same format, that will also work. If not, I will be adding support for each new PDF as they are released by TTD.
 - Customisations are parsed from a JSON file, simplifying possible future GUI development.

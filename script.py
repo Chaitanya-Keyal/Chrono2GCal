@@ -475,7 +475,7 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
     """
     Extracts room numbers for enrolled courses from the pdf
 
-    **Compatible with Midsem 23-24 Sem 2**
+    **Compatible with Compre 23-24 Sem 2**
 
     Args:
         filepath (str): Path to the seating arrangement pdf file
@@ -500,8 +500,10 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                     [
                         j[0].startswith(x)
                         for x in [
-                            "BITS-PILANI HYDERABAD CAMPUS",
+                            "BITS-PILANI",
                             "MID-SEMESTER",
+                            "SEATING",
+                            "COMPREHENSIVE",
                             "COURSE",
                         ]
                     ]
