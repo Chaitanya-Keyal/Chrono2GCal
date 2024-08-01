@@ -1,8 +1,8 @@
 # Chrono2GCal
 
-<b>Made for BPHC students to add their timetable to Google Calendar directly from [Chronofactorem](https://chrono.crux-bphc.com) developed by [@crux-bphc](https://github.com/crux-bphc).</b>
+Made for BPHC students to add their timetable to Google Calendar directly from [Chronofactorem](https://chrono.crux-bphc.com) developed by [@crux-bphc](https://github.com/crux-bphc).
 
-### Features:
+## Features
 
 - Adds classes to Google Calendar with details like location, instructors, etc.
 - Events are customizable.
@@ -14,7 +14,7 @@
 - Deletes classes on holidays and exam days.
 - Can delete events in bulk with filters.
 
-### Usage:
+## Usage
 
 - `credentials.json` is required to access the Google Calendar API. It can be downloaded from the [Google Calendar API Quickstart](https://developers.google.com/calendar/quickstart/python) page. The file should be placed in the same directory as `script.py`
 - A valid `chronofactoreom` timetable ID is required (Obviously, make your timetable first). It is the last four characters of the URL of the timetable. For example, if the URL is `https://chrono.crux-bphc.com/tt/xUrC`, the timetable ID is `xUrC`.
@@ -23,7 +23,7 @@
 - Run `script.py`. It will prompt you to authorize the script to access your Google Calendar.
 - Follow further instructions in the terminal.
 
-### Notes:
+## Notes
 
 - For exams seating arrangement, the PDFs in `pdfs/` are supported. If other PDFs follow the same format, that will also work. If not, I will be adding support for each new PDF as they are released by TTD.
 - Customisations are parsed from a JSON file, simplifying possible future GUI development.
