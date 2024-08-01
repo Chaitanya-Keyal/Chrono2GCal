@@ -13,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build as api_build
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
 GOOGLE_CALENDAR_COLORS = {
     1: {"name": "Lavender", "hex": "#7986cb"},
     2: {"name": "Sage", "hex": "#33b679"},
@@ -29,6 +29,9 @@ GOOGLE_CALENDAR_COLORS = {
 }
 usable_colors = list(map(str, GOOGLE_CALENDAR_COLORS.keys()))
 specified_colors = []
+
+CALENDAR_ID = None
+HOLIDAY_LIST_PATH = "BITS_Calendar_2024-25.pdf"
 
 
 def auth():
@@ -73,7 +76,7 @@ def get_events(service, start_date, end_date):
     events_result = (
         service.events()
         .list(
-            calendarId="primary",
+            calendarId=CALENDAR_ID,
             timeMin=start_date + "T00:00:00+05:30",
             timeMax=end_date + "T23:59:59+05:30",
             singleEvents=True,
@@ -149,7 +152,9 @@ def del_events(
                 continue
             if event["summary"] in excludeEvent:
                 continue
-            service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+            service.events().delete(
+                calendarId=CALENDAR_ID, eventId=event["id"]
+            ).execute()
             print(f"Event deleted: {event['summary']}")
 
 
@@ -242,7 +247,7 @@ def add_classes(service, classes, start_date, end_date, custom: dict):
             },
             "colorId": get_color(i),
         }
-        service.events().insert(calendarId="primary", body=event).execute()
+        service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
         print(f"Classes Added: {event['summary']}")
 
 
@@ -265,7 +270,9 @@ def del_classes_on_holidays(service, holidays):
                     continue
             except KeyError:
                 continue
-            service.events().delete(calendarId="primary", eventId=event["id"]).execute()
+            service.events().delete(
+                calendarId=CALENDAR_ID, eventId=event["id"]
+            ).execute()
             print(f"Event deleted: {event['summary']}")
 
 
@@ -314,7 +321,7 @@ def add_exams(
             exam["location"] = exam_rooms[i.split("|")[1].lower()][i.split("|")[0]]
         except KeyError:
             pass
-        service.events().insert(calendarId="primary", body=exam).execute()
+        service.events().insert(calendarId=CALENDAR_ID, body=exam).execute()
         print(f"{i.split('|')[1]} added: {i.split('|')[0]}")
 
     print("\nDeleting Classes during Exams...")
@@ -357,7 +364,7 @@ def add_exam_rooms(service, room_numbers, examtype):
         if event["summary"] in room_numbers:
             event["location"] = room_numbers[event["summary"]]
             service.events().update(
-                calendarId="primary", eventId=event["id"], body=event
+                calendarId=CALENDAR_ID, eventId=event["id"], body=event
             ).execute()
             print(f"Room number added to {event['summary']}")
         else:
@@ -977,6 +984,7 @@ def customisation(classes):
 
 
 def main(creds):
+    global CALENDAR_ID
     """
     Main function to run the script
 
@@ -986,6 +994,27 @@ def main(creds):
         None
     """
     service = api_build("calendar", "v3", credentials=creds)
+
+    existing_calendars = service.calendarList().list().execute()
+    created_calendar = None
+
+    for i in existing_calendars["items"]:
+        if i["summary"] == "BITS Timetable":
+            created_calendar = i
+            break
+    else:
+        created_calendar = (
+            service.calendars()
+            .insert(
+                body={
+                    "summary": "BITS Timetable",
+                    "timeZone": "Asia/Kolkata",
+                }
+            )
+            .execute()
+        )
+    CALENDAR_ID = created_calendar["id"]
+    print(f"Calendar ID: {CALENDAR_ID}")
 
     student_ID = None
     while True:
@@ -1017,7 +1046,7 @@ def main(creds):
             custom = initialise(service, timetable_ID, student_ID, start_date, end_date)
             with open("customisation.json", "w") as f:
                 json.dump(custom, f, indent=4)
-            del_classes_on_holidays(service, get_holidays("BITS_Calendar_23_24.pdf"))
+            del_classes_on_holidays(service, get_holidays(HOLIDAY_LIST_PATH))
             print("\nDone.")
             break
         elif choice == "2":
