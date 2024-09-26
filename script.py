@@ -303,11 +303,11 @@ def add_exams(
         exam = {
             "summary": i.split("|")[0],
             "start": {
-                "dateTime": i.split("|")[2].replace("2023", "2024"),
+                "dateTime": i.split("|")[2],
                 "timeZone": "Asia/Kolkata",
             },
             "end": {
-                "dateTime": i.split("|")[3].replace("2023", "2024"),
+                "dateTime": i.split("|")[3],
                 "timeZone": "Asia/Kolkata",
             },
             "description": i.split("|")[1],
@@ -327,16 +327,16 @@ def add_exams(
     print("\nDeleting Classes during Exams...")
     del_events(
         service,
-        exams_start_end_dates["midsem_start_date"].replace("2023", "2024"),
-        exams_start_end_dates["midsem_end_date"].replace("2023", "2024"),
+        exams_start_end_dates["midsem_start_date"],
+        exams_start_end_dates["midsem_end_date"],
         excludeColorId=[custom["exam_color_id"]],
         onlyColorId=usable_colors + specified_colors,
         force=True,
     )
     del_events(
         service,
-        exams_start_end_dates["compre_start_date"].replace("2023", "2024"),
-        exams_start_end_dates["compre_end_date"].replace("2023", "2024"),
+        exams_start_end_dates["compre_start_date"],
+        exams_start_end_dates["compre_end_date"],
         excludeColorId=[custom["exam_color_id"]],
         onlyColorId=usable_colors + specified_colors,
         force=True,
@@ -354,11 +354,13 @@ def add_exam_rooms(service, room_numbers, examtype):
     Returns:
         None
     """
+    print("Adding Room Numbers to Exam Events...")
+    print(room_numbers)
     exams_start_end_dates = get_exams_start_end_dates()
     events = get_events(
         service,
-        exams_start_end_dates[f"{examtype}_start_date"].replace("2023", "2024"),
-        exams_start_end_dates[f"{examtype}_end_date"].replace("2023", "2024"),
+        exams_start_end_dates[f"{examtype}_start_date"],
+        exams_start_end_dates[f"{examtype}_end_date"],
     )
     for event in events:
         if event["summary"] in room_numbers:
@@ -459,6 +461,7 @@ def get_courses_enrolled(timetable_ID):
     Returns:
         list: List of courses enrolled (course IDs)
     """
+    print("Fetching courses enrolled...")
     timetable = json.loads(
         requests.get(f"https://chrono.crux-bphc.com/api/timetable/{timetable_ID}").text
     )
@@ -491,6 +494,7 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
     Returns:
         dict: Dictionary of course IDs and room numbers
     """
+    print("Fetching exam room numbers...")
     pdf = pdfplumber.open(filepath)
     tables = []
     for i in pdf.pages:
@@ -509,6 +513,7 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                         for x in [
                             "BITS-PILANI",
                             "MID-SEMESTER",
+                            "MIDSEMESTER",
                             "SEATING",
                             "COMPREHENSIVE",
                             "COURSE",
@@ -999,7 +1004,7 @@ def main(creds):
     created_calendar = None
 
     for i in existing_calendars["items"]:
-        if i["summary"] == "BITS Timetable":
+        if i["summary"] == "Timetable":
             created_calendar = i
             break
     else:
@@ -1007,7 +1012,7 @@ def main(creds):
             service.calendars()
             .insert(
                 body={
-                    "summary": "BITS Timetable",
+                    "summary": "Timetable",
                     "timeZone": "Asia/Kolkata",
                 }
             )
@@ -1021,7 +1026,6 @@ def main(creds):
         student_ID = input("Enter your Student ID: ").strip().upper()
         if (
             len(student_ID) != 13
-            or student_ID[:4] not in ["2018", "2019", "2020", "2021", "2022", "2023"]
             or not student_ID[8:12].isdigit()
             or student_ID[-1] != "H"
         ):
