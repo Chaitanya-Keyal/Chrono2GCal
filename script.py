@@ -526,8 +526,8 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                 elif j[0] != "":  # For courses with multiple rooms
                     cur_course = ""
                 if cur_course:
-                    ids = j[4].split(" to\n")
-                    if ids[0] <= student_ID <= ids[1]:
+                    ids = j[4].split("to")
+                    if ids[0].strip() <= student_ID <= ids[1].strip():
                         room_numbers[cur_course] = j[3]
                         continue
             except:
