@@ -517,6 +517,7 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                             "SEATING",
                             "COMPREHENSIVE",
                             "COURSE",
+                            "Course",
                         ]
                     ]
                 ):  # Skip headers
