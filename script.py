@@ -277,7 +277,13 @@ def del_classes_on_holidays(service, holidays):
 
 
 def add_exams(
-    service, exams, exams_start_end_dates: dict, custom: dict, timetable_ID, student_ID
+    service,
+    exams,
+    exams_start_end_dates: dict,
+    custom: dict,
+    timetable_ID,
+    student_ID,
+    increment_exam_year: Tuple[str, str] = None,
 ):
     """
     Adds all exams and deletes classes during exams
@@ -289,6 +295,7 @@ def add_exams(
         custom (dict): Customisation dictionary
         timetable_ID: Chrono timetable ID
         student_ID (str): Student ID
+        increment_exam_year (tuple): (from_year, to_year) to increment the year of the exam
     Returns:
         None
     """
@@ -300,17 +307,25 @@ def add_exams(
             student_ID,
         )
     for i in exams:
+        code, exam_type, start_time, end_time = i.split("|")
+        cust_title = custom[code]["title"]
+        title = code if code == cust_title else f"{code} - {cust_title}"
+        if increment_exam_year:
+            start_time = start_time.replace(
+                increment_exam_year[0], increment_exam_year[1]
+            )
+            end_time = end_time.replace(increment_exam_year[0], increment_exam_year[1])
         exam = {
-            "summary": i.split("|")[0],
+            "summary": title,
             "start": {
-                "dateTime": i.split("|")[2],
+                "dateTime": start_time,
                 "timeZone": "Asia/Kolkata",
             },
             "end": {
-                "dateTime": i.split("|")[3],
+                "dateTime": end_time,
                 "timeZone": "Asia/Kolkata",
             },
-            "description": i.split("|")[1],
+            "description": exam_type,
             "colorId": custom["exam_color_id"],
             "reminders": {
                 "useDefault": False,
@@ -318,13 +333,19 @@ def add_exams(
             },
         }
         try:
-            exam["location"] = exam_rooms[i.split("|")[1].lower()][i.split("|")[0]]
+            exam["location"] = exam_rooms[exam_type.lower()][code]
         except KeyError:
             pass
         service.events().insert(calendarId=CALENDAR_ID, body=exam).execute()
-        print(f"{i.split('|')[1]} added: {i.split('|')[0]}")
+        print(f"{exam_type} added: {title}")
 
     print("\nDeleting Classes during Exams...")
+    if increment_exam_year:
+        for key, value in exams_start_end_dates.items():
+            exams_start_end_dates[key] = value.replace(
+                increment_exam_year[0], increment_exam_year[1]
+            )
+
     del_events(
         service,
         exams_start_end_dates["midsem_start_date"],
@@ -759,6 +780,7 @@ def initialise(service, timetable_ID, student_ID, start_date, end_date):
         custom,
         timetable_ID,
         student_ID,
+        increment_exam_year=("2024", "2025"),
     )
     return custom
 
