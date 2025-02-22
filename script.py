@@ -364,7 +364,12 @@ def add_exams(
     )
 
 
-def add_exam_rooms(service, room_numbers, examtype):
+def add_exam_rooms(
+    service,
+    room_numbers,
+    examtype,
+    increment_exam_year: Tuple[str, str] = None,
+):
     """
     Adds room numbers to the already created exam events
 
@@ -372,26 +377,34 @@ def add_exam_rooms(service, room_numbers, examtype):
         service (googleapiclient.discovery.Resource): Google Calendar API service
         room_numbers (dict): Dictionary of course IDs and room numbers
         examtype (str): midsem or compre
+        increment_exam_year (tuple): (from_year, to_year) to increment the year of the exam
     Returns:
         None
     """
     print("Adding Room Numbers to Exam Events...")
     print(room_numbers)
     exams_start_end_dates = get_exams_start_end_dates()
+    if increment_exam_year:
+        for key, value in exams_start_end_dates.items():
+            exams_start_end_dates[key] = value.replace(
+                increment_exam_year[0], increment_exam_year[1]
+            )
     events = get_events(
         service,
         exams_start_end_dates[f"{examtype}_start_date"],
         exams_start_end_dates[f"{examtype}_end_date"],
     )
-    for event in events:
-        if event["summary"] in room_numbers:
-            event["location"] = room_numbers[event["summary"]]
-            service.events().update(
-                calendarId=CALENDAR_ID, eventId=event["id"], body=event
-            ).execute()
-            print(f"Room number added to {event['summary']}")
+    for course_code, room_number in room_numbers.items():
+        for event in events:
+            if event["summary"].startswith(course_code):
+                event["location"] = room_number
+                service.events().update(
+                    calendarId=CALENDAR_ID, eventId=event["id"], body=event
+                ).execute()
+                print(f"Room number added to {event['summary']}")
+                break
         else:
-            print(f"Room number not found for {event['summary']}")
+            print(f"Room number not found for {course_code}")
 
 
 # endregion
@@ -535,6 +548,7 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                             "BITS-PILANI",
                             "MID-SEMESTER",
                             "MIDSEMESTER",
+                            "MID SEMESTER",
                             "SEATING",
                             "COMPREHENSIVE",
                             "COURSE",
@@ -1094,6 +1108,7 @@ def main(creds):
                             student_ID,
                         ),
                         "midsem" if op == "1" else "compre",
+                        increment_exam_year=("2024", "2025"),
                     )
                 elif op == "3":
                     break
