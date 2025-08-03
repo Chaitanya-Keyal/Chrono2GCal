@@ -31,7 +31,7 @@ usable_colors = list(map(str, GOOGLE_CALENDAR_COLORS.keys()))
 specified_colors = []
 
 CALENDAR_ID = None
-HOLIDAY_LIST_PATH = "BITS_Calendar_2024-25.pdf"
+HOLIDAY_LIST_PATH = "BITS_Calendar_2025-26.pdf"
 
 
 def auth():
@@ -283,7 +283,7 @@ def add_exams(
     custom: dict,
     timetable_ID,
     student_ID,
-    increment_exam_year: Tuple[str, str] = None,
+    increment_exam_year: Tuple[str, str] | None = None,
 ):
     """
     Adds all exams and deletes classes during exams
@@ -368,7 +368,7 @@ def add_exam_rooms(
     service,
     room_numbers,
     examtype,
-    increment_exam_year: Tuple[str, str] = None,
+    increment_exam_year: Tuple[str, str] | None = None,
 ):
     """
     Adds room numbers to the already created exam events
@@ -794,7 +794,7 @@ def initialise(service, timetable_ID, student_ID, start_date, end_date):
         custom,
         timetable_ID,
         student_ID,
-        increment_exam_year=("2024", "2025"),
+        increment_exam_year=None,
     )
     return custom
 
@@ -1108,7 +1108,7 @@ def main(creds):
                             student_ID,
                         ),
                         "midsem" if op == "1" else "compre",
-                        increment_exam_year=("2024", "2025"),
+                        increment_exam_year=None,
                     )
                 elif op == "3":
                     break
