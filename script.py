@@ -557,8 +557,17 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                     ]
                 ):  # Skip headers
                     continue
-                if j[0] in courses_enrolled:  # If course is enrolled
-                    cur_course = j[0]
+                if any(x in j[0] for x in courses_enrolled):  # If course is enrolled
+                    cur_course = next(x for x in courses_enrolled if x in j[0])
+                elif j[0] == "CS/ECE/EEE/I" and any(
+                    x in courses_enrolled
+                    for x in ["CS F215", "ECE F215", "EEE F215", "INSTR F215"]
+                ):  # DD
+                    cur_course = next(
+                        x
+                        for x in courses_enrolled
+                        if x in ["CS F215", "ECE F215", "EEE F215", "INSTR F215"]
+                    )
                 elif j[0] != "":  # For courses with multiple rooms
                     cur_course = ""
                 if cur_course:
