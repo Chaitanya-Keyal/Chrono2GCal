@@ -559,9 +559,13 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                     continue
                 if any(x in j[0] for x in courses_enrolled):  # If course is enrolled
                     cur_course = next(x for x in courses_enrolled if x in j[0])
-                elif j[0] == "CS/ECE/EEE/I" and any(
-                    x in courses_enrolled
-                    for x in ["CS F215", "ECE F215", "EEE F215", "INSTR F215"]
+                elif (
+                    "CS/ECE/EEE/I" in j[0]
+                    and "F215" in j[0]
+                    and any(
+                        x in courses_enrolled
+                        for x in ["CS F215", "ECE F215", "EEE F215", "INSTR F215"]
+                    )
                 ):  # DD
                     cur_course = next(
                         x
