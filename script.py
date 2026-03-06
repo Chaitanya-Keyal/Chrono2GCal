@@ -572,6 +572,25 @@ def get_room_numbers(filepath, courses_enrolled, student_ID):
                         for x in courses_enrolled
                         if x in ["CS F215", "ECE F215", "EEE F215", "INSTR F215"]
                     )
+                elif (
+                    "CS/ECE/EEE/I" in j[0]
+                    and "F241" in j[0]
+                    and any(
+                        x in courses_enrolled
+                        for x in ["CS F241", "ECE F241", "EEE F241", "INSTR F241"]
+                    )
+                ):  # MPI
+                    cur_course = next(
+                        x
+                        for x in courses_enrolled
+                        if x in ["CS F241", "ECE F241", "EEE F241", "INSTR F241"]
+                    )
+                elif ("ECE/EEE F434" in j[0] and "F434" in j[0]) and any(
+                    x in courses_enrolled for x in ["ECE F434", "EEE F434"]
+                ):  # DSP
+                    cur_course = next(
+                        x for x in courses_enrolled if x in ["ECE F434", "EEE F434"]
+                    )
                 elif j[0] != "":  # For courses with multiple rooms
                     cur_course = ""
                 if cur_course:
