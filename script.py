@@ -31,7 +31,7 @@ usable_colors = list(map(str, GOOGLE_CALENDAR_COLORS.keys()))
 specified_colors = []
 
 CALENDAR_ID = None
-HOLIDAY_LIST_PATH = "BITS_Calendar_2025-26.pdf"
+HOLIDAY_LIST_PATH = "BITS_Calendar_2026-27.pdf"
 
 
 def auth():
@@ -470,7 +470,9 @@ def get_holidays(filepath):
     holidays = []
     for i in tables:
         for j in i:
-            if j[1] and j[1].endswith("(H)"):
+            if j[1] and any(
+                j[1].endswith(x) for x in ["(H)", "(H for Hyderabad Campus)"]
+            ):
                 holidays.append(
                     datetime.datetime.strptime(j[0][: j[0].index("(")].strip(), "%B %d")
                 )  # Extracts the date from the table
@@ -857,14 +859,12 @@ def customisation(classes):
     new_custom = {}
     print("\n*Please refer to customisation_guidelines.md before proceeding*\n")
     while True:
-        print(
-            """Customisation Menu:
+        print("""Customisation Menu:
 1. Edit customisation.json (Requires knowledge of JSON)
 2. Edit customisation interactively (Tedious but easy to use)
 3. No customisation (Default)
 
-"""
-        )
+""")
         choice = input("Enter your choice: ")
         if choice == "1":
             with open("customisation.json", "w") as f:
@@ -885,8 +885,7 @@ def customisation(classes):
             break
         elif choice == "2":
             while True:
-                print(
-                    """\nMenu:
+                print("""\nMenu:
 1. Change reminder time
 2. Group classes by course or type
 3. Add Exam rooms if available
@@ -895,8 +894,7 @@ def customisation(classes):
 6. Remove colors
 7. Customise individual classes
 8. Confirm and save customisation
-"""
-                )
+""")
                 op = input("Enter your choice: ")
                 if op == "1":
                     rem = input("Enter reminder time (in minutes): ")
@@ -909,14 +907,12 @@ def customisation(classes):
                         print("Invalid Input\n")
                         continue
                 elif op == "2":
-                    print(
-                        """\nMenu:
+                    print("""\nMenu:
 1. Group by type
 2. Group by course
 3. Back to Customisation Menu
 
-"""
-                    )
+""")
                     grp = input("Enter your choice: ")
                     if grp == "1":
                         custom["course_grouping"] = 0
@@ -930,12 +926,10 @@ def customisation(classes):
                         print("Invalid Choice\n")
                         continue
                 elif op == "3":
-                    print(
-                        """\nMenu:
+                    print("""\nMenu:
 1. Midsems
 2. Compres
-3. Back to Customisation Menu"""
-                    )
+3. Back to Customisation Menu""")
                     exam = input("Enter your choice: ")
                     if exam == "1" or exam == "2":
                         fp = input_filepath()
@@ -947,13 +941,11 @@ def customisation(classes):
                         print("Invalid Choice\n")
                         continue
                 elif op == "4":
-                    print(
-                        """\nMenu:
+                    print("""\nMenu:
 1. Lecture
 2. Tutorial
 3. Practical
-4. Back to Customisation Menu"""
-                    )
+4. Back to Customisation Menu""")
                     color = input("Enter your choice: ")
                     id = input("Enter colorId: ")
                     try:
@@ -1006,13 +998,11 @@ def customisation(classes):
                             if not 1 <= int(course) <= len(a):
                                 raise ValueError
                             while True:
-                                print(
-                                    f"""\nMenu {a[int(course)-1]}:
+                                print(f"""\nMenu {a[int(course)-1]}:
     1. Change title
     2. Add description
     3. Change color
-    4. Back to Customisation Menu"""
-                                )
+    4. Back to Customisation Menu""")
                                 edit = input("Enter your choice: ")
                                 if edit == "1":
                                     title = input("Enter title: ")
@@ -1105,14 +1095,12 @@ def main(creds):
     timetable_ID = input("Enter timetable ID: ")
 
     while True:
-        print(
-            """\nMenu:
+        print("""\nMenu:
 1. Add Classes and Exams
 2. Update Exam Seating Arrangement
 3. Delete Events in a Date Range
 4. Exit
-"""
-        )
+""")
         choice = input("Enter your choice: ")
         if choice == "1":
             start_date, end_date = input_dates()
@@ -1124,12 +1112,10 @@ def main(creds):
             break
         elif choice == "2":
             while True:
-                print(
-                    """\nMenu:
+                print("""\nMenu:
 1. Midsems
 2. Compres
-3. Back to Main Menu"""
-                )
+3. Back to Main Menu""")
                 op = input("Enter your choice: ")
                 if op == "1" or op == "2":
                     add_exam_rooms(
